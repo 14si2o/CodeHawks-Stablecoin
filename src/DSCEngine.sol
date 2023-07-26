@@ -118,7 +118,6 @@ contract DSCEngine is ReentrancyGuard {
         }
         // For example ETH / USD, BTC / USD, MKR / USD, etc
         for (uint256 i = 0; i < tokenAddresses.length; i++) {
-        //@audit no check that the pricefeedaddress is correct
             s_priceFeeds[tokenAddresses[i]] = priceFeedAddresses[i];
             s_collateralTokens.push(tokenAddresses[i]);
         }
@@ -252,6 +251,7 @@ contract DSCEngine is ReentrancyGuard {
         // We should implement a feature to liquidate in the event the protocol is insolvent
         // And sweep extra amounts into a treasury
         // 0.05 * 0.1 = 0.005. Getting 0.055
+        //@audit the 10% bonus comes from the spread between the value and the collaral value, but this break if the difference is less than 10%. In such a case the total collateral to be redeemed is larger than the total value of the collateral. Who pays then? 
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
         _redeemCollateral(user, msg.sender, collateral, totalCollateralToRedeem);
@@ -341,7 +341,7 @@ contract DSCEngine is ReentrancyGuard {
     // External & Public View & Pure Functions
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-
+    //@audit assumes all tokens have 18 decimals, this is not always the case
     function getTokenAmountFromUsd(address token, uint256 usdAmountInWei) public view returns (uint256) {
         // price of ETH (token)
         // $/ETH ETH ??
@@ -368,6 +368,7 @@ contract DSCEngine is ReentrancyGuard {
         (, int256 price,,,) = priceFeed.staleCheckLatestRoundData();
         // 1 ETH = $1000
         // The returned value from CL will be 1000 * 1e8
+        //@audit price calculation will break if pricefeed decimals are =/ 18
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
     }
 
