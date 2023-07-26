@@ -84,6 +84,7 @@ contract DSCEngine is ReentrancyGuard {
     /////////////////////
     // Events          //
     /////////////////////
+    //@audit no event for DSC Minted?
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
     event CollateralRedeemed(
         address indexed redeemedFrom, address indexed redeemedTo, address indexed token, uint256 amount
@@ -111,11 +112,13 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////
     constructor(address[] memory tokenAddresses, address[] memory priceFeedAddresses, address dscAddress) {
         // USD Price Feeds
+        //@audit this check is to make sure there is no token with 0 pricefeed, but if both array have a 0 at different spots, does this not pose a problem?
         if (tokenAddresses.length != priceFeedAddresses.length) {
             revert DSCEngine__TokenAddressesAndPriceFeedAddressesMustBeSameLength();
         }
         // For example ETH / USD, BTC / USD, MKR / USD, etc
         for (uint256 i = 0; i < tokenAddresses.length; i++) {
+        //@audit no check that the pricefeedaddress is correct
             s_priceFeeds[tokenAddresses[i]] = priceFeedAddresses[i];
             s_collateralTokens.push(tokenAddresses[i]);
         }
@@ -211,6 +214,7 @@ contract DSCEngine is ReentrancyGuard {
      */
     function burnDsc(uint256 amount) public moreThanZero(amount) {
         _burnDsc(amount, msg.sender, msg.sender);
+    // @audit is there a fuzzing test that proves otherwise? 
         _revertIfHealthFactorIsBroken(msg.sender); // I don't think this would ever hit...
     }
 
@@ -269,6 +273,7 @@ contract DSCEngine is ReentrancyGuard {
      * @dev Low-level internal function, do not call unless the function calling it is 
      * checking for health factors being broken
      */
+     //@audit can this underflow? No check implemented to stop you from burning more DSC then you have
     function _burnDsc(uint256 amountDscToBurn, address onBehalfOf, address dscFrom) private {
         s_DSCMinted[onBehalfOf] -= amountDscToBurn;
         bool success = i_dsc.transferFrom(dscFrom, address(this), amountDscToBurn);
