@@ -17,7 +17,7 @@ library OracleLib {
     error OracleLib__StalePrice();
 
     uint256 private constant TIMEOUT = 3 hours; // 3 * 60 * 60 = 10800 seconds
-
+    //@audit only a check for stale price but not for incomplete rounds. 
     function staleCheckLatestRoundData(AggregatorV3Interface priceFeed)
         public
         view
