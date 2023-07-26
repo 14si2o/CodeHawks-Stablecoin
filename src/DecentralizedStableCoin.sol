@@ -43,6 +43,7 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
 
     constructor() ERC20("DecentralizedStableCoin", "DSC") {}
 
+//@audit the visibility should be set to external
     function burn(uint256 _amount) public override onlyOwner {
         uint256 balance = balanceOf(msg.sender);
         if (_amount <= 0) {
