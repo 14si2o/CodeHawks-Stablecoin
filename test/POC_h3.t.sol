@@ -23,8 +23,6 @@ contract POC_BonusSystem is StdCheats, Test {
     address weth;
     address wbtc;
     uint256 deployerKey;
-    uint256 beforeBalance;
-    uint256 afterBalance;
 
     address user = makeAddr("user");
     address liquidator = makeAddr("liquidator");
@@ -56,13 +54,10 @@ contract POC_BonusSystem is StdCheats, Test {
         console.log("User %s has:", user);
         console.log("%s DSC", dsc.balanceOf(user));
         console.log("%s USD value of weth", dsce.getUsdValue(weth,1 ether));
-        console.log("%s current collateralisation ratio", dsce.getUsdValue(weth,1 ether)/dsc.balanceOf(user));
+        console.log("current collateralisation ratio percentage: %s", dsce.getUsdValue(weth,1 ether)*100/dsc.balanceOf(user));
         console.log("Current user %s health factor: %s", user, dsce.getHealthFactor(user));
         console.log("Is liquiditable? %s", dsce.getHealthFactor(user) < dsce.getMinHealthFactor());        
         dsc.approve(address(dsce), 100000 ether);
-        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(200000000000);
-        console.log("Updated WETH oracle value to 200000000000 which give a 200% collateralisation rate", uint256(MockV3Aggregator
-        (ethUsdPriceFeed).latestAnswer()));
         vm.stopPrank();
 
         //Liquidate at 110% collateralisation 
@@ -72,21 +67,15 @@ contract POC_BonusSystem is StdCheats, Test {
         dsce.depositCollateralAndMintDsc(weth, 5 ether, 1000 ether);
         console.log("User %s has:", liquidator);
         console.log("%s DSC", dsc.balanceOf(liquidator));
-        beforeBalance = ERC20Mock(weth).balanceOf(liquidator);
         console.log("%s USD value of weth", dsce.getUsdValue(weth,1 ether));
-
         MockV3Aggregator(ethUsdPriceFeed).updateAnswer(110000000000);
         console.log("Updated WETH oracle value to 110000000000 which give a 110% collateralisation rate", uint256(MockV3Aggregator
         (ethUsdPriceFeed).latestAnswer()));
-        console.log("%s current collateralisation ratio", dsce.getUsdValue(weth,1 ether)*100/dsc.balanceOf(user));
-        console.log("Current user %s health factor: %s", user, dsce.getHealthFactor(user));
+        console.log("current collateralisation ratio percentage: %s", dsce.getUsdValue(weth,1 ether)*100/dsc.balanceOf(user));
         console.log("Is liquiditable? %s", dsce.getHealthFactor(user) < dsce.getMinHealthFactor());
         console.log("Calling liquidate function for the full debt amount");
         dsce.liquidate(weth, user, 1000 ether);
-        afterBalance = ERC20Mock(weth).balanceOf(liquidator);
-        console.log("before weth balance %s",  beforeBalance);
-        console.log("after weth balance %s", afterBalance);
-        console.log(" Liquidate function working as expected %s", (afterBalance - beforeBalance));
+        console.log("Liquidate function working as expected ");
     }
 
     function testFailBonusSystem() external {
@@ -98,9 +87,6 @@ contract POC_BonusSystem is StdCheats, Test {
         ERC20Mock(weth).approve(address(dsce), 100000 ether);
         dsce.depositCollateralAndMintDsc(weth, 1 ether, 1000 ether);
         dsc.approve(address(dsce), 100000 ether);
-        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(200000000000);
-        console.log("Updated WETH oracle value to 200000000000 which give a 200% collateralisation rate", uint256(MockV3Aggregator
-        (ethUsdPriceFeed).latestAnswer()));
         vm.stopPrank();
 
 
@@ -111,12 +97,11 @@ contract POC_BonusSystem is StdCheats, Test {
         dsce.depositCollateralAndMintDsc(weth, 5 ether, 1000 ether);
         console.log("User %s has:", liquidator);
         console.log("%s DSC", dsc.balanceOf(liquidator));
-        beforeBalance = ERC20Mock(weth).balanceOf(liquidator);
         console.log("%s USD value of weth", dsce.getUsdValue(weth,1 ether));
         MockV3Aggregator(ethUsdPriceFeed).updateAnswer(10999999999);
         console.log("Updated WETH oracle value to 10999999999 which give a 109.99999999999% collateralisation rate", uint256(MockV3Aggregator
         (ethUsdPriceFeed).latestAnswer()));
-        console.log("Calling liquidate function for the full debt amount");
+        console.log("Calling liquidate function for the full debt amount, expecting an Underflow");
         dsce.liquidate(weth, user, 1000 ether);
 
     }
