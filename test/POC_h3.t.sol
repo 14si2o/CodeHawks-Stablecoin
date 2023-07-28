@@ -13,7 +13,7 @@ import {MockV3Aggregator} from "./mocks/MockV3Aggregator.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 
-contract POC_LiquidationSystem is StdCheats, Test {
+contract POC_BonusSystem is StdCheats, Test {
     DecentralizedStableCoin dsc;
     DSCEngine dsce;
     HelperConfig helperConfig;
@@ -44,7 +44,7 @@ contract POC_LiquidationSystem is StdCheats, Test {
         ERC20Mock(weth).mint(address(dsce), 1_000_000 ether);
     }
 
-    function testLiquidationSystem() external {
+    function testBonusSystem() external {
         console.log(unicode"🕛 Starting POC testLiquidationSystem");
         console.log("First, we will add 1e18 WETH @ %s USD/WETH (8 decimals) to mint 1000e18 DSC for the user %s",
             uint256(MockV3Aggregator(ethUsdPriceFeed).latestAnswer()),
@@ -55,21 +55,44 @@ contract POC_LiquidationSystem is StdCheats, Test {
         console.log("%s weth", ERC20Mock(weth).balanceOf(user));
         console.log("%s DSC", dsc.balanceOf(user));
         console.log("Adding the collateral and minting...");
-        ERC20Mock(weth).approve(address(dsce), 1 ether);
+        ERC20Mock(weth).approve(address(dsce), 100000 ether);
         dsce.depositCollateralAndMintDsc(weth, 1 ether, 1000 ether);
         console.log("User %s has:", user);
-        console.log("%s weth", ERC20Mock(weth).balanceOf(user));
         console.log("%s DSC", dsc.balanceOf(user));
+        console.log("%s USD value of weth", dsce.getUsdValue(weth,1 ether));
+        console.log("%s current collateralisation ratio", dsce.getUsdValue(weth,1 ether)/dsc.balanceOf(user));
         console.log("Current user %s health factor: %s", user, dsce.getHealthFactor(user));
+        console.log("Is liquiditable? %s", dsce.getHealthFactor(user) < dsce.getMinHealthFactor());        
         dsc.approve(address(dsce), 100000 ether);
-
         console.log("Let's reduce WETH value in the oracle to $1/weth");
-        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(1e8);
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(200000000000);
         console.log("Updated WETH oracle value to %s USD/WETH (8 decimals)", uint256(MockV3Aggregator
         (ethUsdPriceFeed).latestAnswer()));
+        console.log("%s current collateralisation ratio", dsce.getUsdValue(weth,1 ether)*100/dsc.balanceOf(user));
         console.log("Current user %s health factor: %s", user, dsce.getHealthFactor(user));
-        // How is possible to not be liquiditable when 1 weth = 1 USD if we started at $2000 = 1 weth????
         console.log("Is liquiditable? %s", dsce.getHealthFactor(user) < dsce.getMinHealthFactor());
         vm.stopPrank();
+
+
+        vm.startPrank(liquidator);
+        dsc.approve(address(dsce), 10000000000000000000000000 ether);
+        ERC20Mock(weth).approve(address(dsce), 1 ether);
+        dsce.depositCollateralAndMintDsc(weth, 1 ether, 1000 ether);
+        console.log("User %s has:", liquidator);
+        console.log("%s DSC", dsc.balanceOf(liquidator));
+        console.log("%s USD value of weth", dsce.getUsdValue(weth,1 ether));
+
+        console.log("Let's reduce WETH value in the oracle to $1/weth");
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(190000000000);
+        console.log("Updated WETH oracle value to %s USD/WETH (8 decimals)", uint256(MockV3Aggregator
+        (ethUsdPriceFeed).latestAnswer()));
+        console.log("%s current collateralisation ratio", dsce.getUsdValue(weth,1 ether)*100/dsc.balanceOf(user));
+        console.log("Current user %s health factor: %s", user, dsce.getHealthFactor(user));
+        console.log("Is liquiditable? %s", dsce.getHealthFactor(user) < dsce.getMinHealthFactor());
+        dsce.liquidate(weth, user, 1000 ether);
+
+
+
+
     }
 }
