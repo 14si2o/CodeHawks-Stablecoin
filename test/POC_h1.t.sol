@@ -58,17 +58,14 @@ contract POC_BurnAccounting is StdCheats, Test {
         assertEq(dsc.balanceOf(user), 1000);
         console.log("calling burnDsc, burning 1000 DSC, the entire user balance"); 
         dsce.burnDsc(1000);
-        console.log("asserting userbalance to be = 0"); 
+        console.log("asserting userbalance to be = 0 since all DSC was burned"); 
         assertEq(dsc.balanceOf(user), 0);
         vm.stopPrank();
 
     }
 
     function testFailBurnAccounting() external {
-        console.log(unicode"🕛 Starting POC testLiquidationSystem");
-        console.log("First, we will add 1e18 WETH @ %s USD/WETH (8 decimals) to mint 1000e18 DSC for the user %s",
-            uint256(MockV3Aggregator(ethUsdPriceFeed).latestAnswer()),
-            user);
+
         vm.startPrank(user);
         ERC20Mock(weth).approve(address(dsce), 100000 ether);
         dsce.depositCollateralAndMintDsc(weth, 1 ether, 1000 ether);
@@ -81,16 +78,13 @@ contract POC_BurnAccounting is StdCheats, Test {
         dsc.approve(address(dsce), 10000000000000000000000000 ether);
         ERC20Mock(weth).approve(address(dsce), 100000 ether);
         MockV3Aggregator(ethUsdPriceFeed).updateAnswer(200000000000);
-        console.log("price 2000$", uint256(MockV3Aggregator
-        (ethUsdPriceFeed).latestAnswer()));
         dsce.depositCollateralAndMintDsc(weth, 10000 ether, 1000 ether);
         MockV3Aggregator(ethUsdPriceFeed).updateAnswer(199999999999);
         console.log("price 1999$", uint256(MockV3Aggregator
         (ethUsdPriceFeed).latestAnswer()));
         console.log("user DSC balance is %s",dsc.balanceOf(user));
-        console.log("Calling liquidate function for the full debt amount %s" );
+        console.log("Calling the liquidate function for the full debt amount" );
         dsce.liquidate(weth, user, 1000 ether);
-        console.log("user DSC balance is %s",dsc.balanceOf(user));
         console.log("after being liquidited, the DSC of user should be 0 since he no longer has any collateral");
         console.log("asserting the user balance of DSC to be 0"); 
         assertEq(dsc.balanceOf(user),0);
