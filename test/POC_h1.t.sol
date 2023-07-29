@@ -39,44 +39,32 @@ contract POC_BurnAccounting is StdCheats, Test {
         }
         ERC20Mock(weth).mint(user, STARTING_USER_BALANCE);
         ERC20Mock(wbtc).mint(user, STARTING_USER_BALANCE);
-        ERC20Mock(weth).mint(liquidator, 10 ether);
+        ERC20Mock(weth).mint(liquidator, 100000 ether);
         ERC20Mock(wbtc).mint(liquidator, STARTING_USER_BALANCE);
     }
 
-    function testBonusSystem() external {
+    function testBurnAccounting() external {
         console.log("Setting weth Price",
             uint256(MockV3Aggregator(ethUsdPriceFeed).latestAnswer()),
             user);
         vm.startPrank(user);
-        ERC20Mock(weth).approve(address(dsce), 100000 ether);
+        ERC20Mock(weth).approve(address(dsce), 10 ether);
         dsce.depositCollateralAndMintDsc(weth, 1 ether, 1000);
         
-        dsc.approve(address(dsce), 100000 );
+        // testing with burnDsc()
+        dsc.approve(address(dsce), 1000 );
+        console.log("user DSC balance is %s",dsc.balanceOf(user));
+        console.log("asserting userbalance to be = 1000:"); 
         assertEq(dsc.balanceOf(user), 1000);
-        console.log("burning 1000 DSC, the entire user balance"); 
+        console.log("calling burnDsc, burning 1000 DSC, the entire user balance"); 
         dsce.burnDsc(1000);
+        console.log("asserting userbalance to be = 0"); 
         assertEq(dsc.balanceOf(user), 0);
-
-       
-
         vm.stopPrank();
-/*
-        //Liquidate at 110% collateralisation 
-        vm.startPrank(liquidator);
-        dsc.approve(address(dsce), 10000000000000000000000000 ether);
-        ERC20Mock(weth).approve(address(dsce), 10 ether);
-        dsce.depositCollateralAndMintDsc(weth, 5 ether, 1000 ether);
-        console.log("User %s has:", liquidator);
-        console.log("%s DSC", dsc.balanceOf(liquidator));
-        console.log("%s USD value of weth", dsce.getUsdValue(weth,1 ether));
-        console.log("%s USD value of weth", dsce.getUsdValue(weth,1 ether));
 
-        console.log("Calling liquidate function for the full debt amount");
-        dsce.liquidate(weth, user, 1000 ether);
-        console.log("Liquidate function working as expected "); */
     }
 
-/*    function testFailBonusSystem() external {
+    function testFailBurnAccounting() external {
         console.log(unicode"🕛 Starting POC testLiquidationSystem");
         console.log("First, we will add 1e18 WETH @ %s USD/WETH (8 decimals) to mint 1000e18 DSC for the user %s",
             uint256(MockV3Aggregator(ethUsdPriceFeed).latestAnswer()),
@@ -88,19 +76,24 @@ contract POC_BurnAccounting is StdCheats, Test {
         vm.stopPrank();
 
 
-        //Liquidate at 109.99999999999% collateralisation 
+        //Testing with liquidate()
         vm.startPrank(liquidator);
         dsc.approve(address(dsce), 10000000000000000000000000 ether);
-        ERC20Mock(weth).approve(address(dsce), 10 ether);
-        dsce.depositCollateralAndMintDsc(weth, 5 ether, 1000 ether);
-        console.log("User %s has:", liquidator);
-        console.log("%s DSC", dsc.balanceOf(liquidator));
-        console.log("%s USD value of weth", dsce.getUsdValue(weth,1 ether));
-        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(10999999999);
-        console.log("Updated WETH oracle value to 10999999999 which give a 109.99999999999% collateralisation rate", uint256(MockV3Aggregator
+        ERC20Mock(weth).approve(address(dsce), 100000 ether);
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(200000000000);
+        console.log("price 2000$", uint256(MockV3Aggregator
         (ethUsdPriceFeed).latestAnswer()));
-        console.log("Calling liquidate function for the full debt amount, expecting an Underflow");
+        dsce.depositCollateralAndMintDsc(weth, 10000 ether, 1000 ether);
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(199999999999);
+        console.log("price 1999$", uint256(MockV3Aggregator
+        (ethUsdPriceFeed).latestAnswer()));
+        console.log("user DSC balance is %s",dsc.balanceOf(user));
+        console.log("Calling liquidate function for the full debt amount %s" );
         dsce.liquidate(weth, user, 1000 ether);
+        console.log("user DSC balance is %s",dsc.balanceOf(user));
+        console.log("after being liquidited, the DSC of user should be 0 since he no longer has any collateral");
+        console.log("asserting the user balance of DSC to be 0"); 
+        assertEq(dsc.balanceOf(user),0);
 
-    } */
+    } 
 }
